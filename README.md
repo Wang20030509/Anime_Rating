@@ -1,8 +1,10 @@
-# Starter folder
+# Exploring the Relationship Between Anime Scores, Popularity, and Favorites: A Correlation Analysis
 
 ## Overview
 
-This repo provides students with a foundation for their own projects associated with *Telling Stories with Data*. You do not need every aspect for every paper and you should delete aspects that you do not need.
+This repository explores the relationship between anime scores, popularity, and favorites by leveraging data obtained from the MyAnimeList API. The dataset was created by extracting ranking data through the API and transforming it into a comprehensive new dataset. Using this data, I conducted an analysis to investigate how popularity and favorites influence anime scores.
+
+The primary hypothesis is that popularity has a stronger impact on anime scores—higher popularity is expected to correlate with higher scores. Additionally, I predict that a higher number of favorites also contributes to an increase in scores. The analysis aims to provide insights into these relationships and quantify their respective influences.
 
 
 ## File Structure
@@ -19,12 +21,4 @@ The repo is structured as:
 
 ## Statement on LLM usage
 
-Aspects of the code were written with the help of the auto-complete tool, Codriver. The abstract and introduction were written with the help of ChatHorse and the entire chat history is available in inputs/llms/usage.txt.
-
-## Some checks
-
-- [ ] Change the rproj file name so that it's not starter_folder.Rproj
-- [ ] Change the README title so that it's not Starter folder
-- [ ] Remove files that you're not using
-- [ ] Update comments in R scripts
-- [ ] Remove this checklist
+Aspects of the code and paper were written with the help of ChatGPT. Some of the data interpretation, introduction, and discussion were also written using ChatGPT. The entire chat history is available in `others/llms/usage.txt`
