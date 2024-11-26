@@ -1,13 +1,12 @@
 ---
-title: "My title"
-subtitle: "My subtitle if needed"
+title: "Exploring the Relationship Between Anime Scores, Popularity, and Favorites"
+subtitle: "A Correlation Analysis of Anime Ranking"
 author: 
-  - First author
-  - Another author
-thanks: "Code and data are available at: [https://github.com/RohanAlexander/starter_folder](https://github.com/RohanAlexander/starter_folder)."
+  -Doran Wang
+thanks: "Code and data are available at: [https://github.com/Wang20030509/Anime_Rating](https://github.com/Wang20030509/Anime_Rating)."
 date: today
 date-format: long
-abstract: "First sentence. Second sentence. Third sentence. Fourth sentence."
+abstract: "This repository explores the relationship between anime scores, popularity, and favorites by leveraging data obtained from the MyAnimeList API. The dataset was created by extracting ranking data through the API and transforming it into a comprehensive new dataset. Using this data, I conducted an analysis to investigate how popularity and favorites influence anime scores.The primary hypothesis is that popularity has a stronger impact on anime scores—higher popularity is expected to correlate with higher scores. Additionally, I predict that a higher number of favorites also contributes to an increase in scores. The analysis aims to provide insights into these relationships and quantify their respective influences."
 format: pdf
 number-sections: true
 bibliography: references.bib
@@ -19,7 +18,10 @@ bibliography: references.bib
 #| message: false
 
 library(tidyverse)
-library(palmerpenguins)
+library(arrow)
+library(knitr)
+
+anime_data <- read_parquet("../data/02-analysis_data/cleaned_data.parquet")
 ```
 
 
@@ -60,18 +62,16 @@ Add graphs, tables and text. Use sub-sub-headings for each outcome variable or u
 
 Some of our data is of penguins (@fig-bills), from @palmerpenguins.
 
-```{r}
-#| label: fig-bills
-#| fig-cap: Bills of penguins
+```{r fig.pos="h"}
+#| label: tbl-clean-data
+#| tbl-cap: "Preview of the cleaned Anime Ranking dataset"
+#| message: false
 #| echo: false
 
-ggplot(penguins, aes(x = island, fill = species)) +
-  geom_bar(alpha = 0.8) +
-  scale_fill_manual(values = c("darkorange","purple","cyan4"),
-                    guide = "none") +
-  theme_minimal() +
-  facet_wrap(~species, ncol = 1) +
-  coord_flip()
+colnames(anime_data) <- c("Score", "Popularity", "Number of users who have this work in list","Ranking")
+
+anime_data[1:5, 1:4] |>
+  kable()
 ```
 
 Talk more about it.
