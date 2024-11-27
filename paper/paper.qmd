@@ -6,7 +6,7 @@ author:
 thanks: "Code and data are available at: [https://github.com/Wang20030509/Anime_Rating](https://github.com/Wang20030509/Anime_Rating)."
 date: today
 date-format: long
-abstract: "This repository explores the relationship between anime scores, popularity, and favorites by leveraging data obtained from the MyAnimeList API. The dataset was created by extracting ranking data through the API and transforming it into a comprehensive new dataset. Using this data, I conducted an analysis to investigate how popularity and favorites influence anime scores.The primary hypothesis is that popularity has a stronger impact on anime scores—higher popularity is expected to correlate with higher scores. Additionally, I predict that a higher number of favorites also contributes to an increase in scores. The analysis aims to provide insights into these relationships and quantify their respective influences."
+abstract: "This paper explores the relationship between anime scores, popularity, and favorites by leveraging data obtained from the MyAnimeList API. The dataset was created by extracting ranking data through the API and transforming it into a comprehensive new dataset. Using this data, I conducted an analysis to investigate how popularity and favorites influence anime scores.The primary hypothesis is that popularity has a stronger impact on anime scores—higher popularity is expected to correlate with higher scores. Additionally, I predict that a higher number of favorites also contributes to an increase in scores. The analysis aims to provide insights into these relationships and quantify their respective influences."
 format: pdf
 number-sections: true
 bibliography: references.bib
