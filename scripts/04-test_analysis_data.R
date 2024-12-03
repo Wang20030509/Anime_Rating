@@ -10,60 +10,93 @@
 
 #### Workspace setup ####
 library(tidyverse)
-library(testthat)
+library(arrow)
 
-data <- read_csv("data/02-analysis_data/analysis_data.csv")
+# Load the cleaned data
+cleaned_data <- read_parquet("data/02-analysis_data/cleaned_data.parquet")
 
+# Test if the data was successfully loaded
+if (exists("cleaned_data")) {
+  message("Test Passed: The dataset was successfully loaded.")
+} else {
+  stop("Test Failed: The dataset could not be loaded.")
+}
 
 #### Test data ####
-# Test that the dataset has 151 rows - there are 151 divisions in Australia
-test_that("dataset has 151 rows", {
-  expect_equal(nrow(analysis_data), 151)
-})
 
-# Test that the dataset has 3 columns
-test_that("dataset has 3 columns", {
-  expect_equal(ncol(analysis_data), 3)
-})
+# Check if the dataset has the correct number of rows (replace 50 with actual row count if known)
+expected_rows <- 50  # Update this based on your expectations
+if (nrow(cleaned_data) == expected_rows) {
+  message("Test Passed: The dataset has ", expected_rows, " rows.")
+} else {
+  stop("Test Failed: The dataset does not have ", expected_rows, " rows.")
+}
 
-# Test that the 'division' column is character type
-test_that("'division' is character", {
-  expect_type(analysis_data$division, "character")
-})
+# Check if the dataset has the expected number of columns (replace 8 with actual column count if known)
+expected_columns <- 8  # Update this based on your expectations
+if (ncol(cleaned_data) == expected_columns) {
+  message("Test Passed: The dataset has ", expected_columns, " columns.")
+} else {
+  stop("Test Failed: The dataset does not have ", expected_columns, " columns.")
+}
 
-# Test that the 'party' column is character type
-test_that("'party' is character", {
-  expect_type(analysis_data$party, "character")
-})
+# Check if all values in specific columns are unique (e.g., "title")
+if (n_distinct(cleaned_data$title) == nrow(cleaned_data)) {
+  message("Test Passed: All values in 'title' are unique.")
+} else {
+  stop("Test Failed: The 'title' column contains duplicate values.")
+}
 
-# Test that the 'state' column is character type
-test_that("'state' is character", {
-  expect_type(analysis_data$state, "character")
-})
+# Check if numeric columns have valid ranges (e.g., "score" is between 1 and 10)
+if (all(cleaned_data$score >= 1 & cleaned_data$score <= 10)) {
+  message("Test Passed: 'score' values are between 1 and 10.")
+} else {
+  stop("Test Failed: 'score' values are out of range.")
+}
 
-# Test that there are no missing values in the dataset
-test_that("no missing values in dataset", {
-  expect_true(all(!is.na(analysis_data)))
-})
+# Check if ranking columns (e.g., "rank", "popularity", "rank_favorites") have valid ranks
+expected_ranks <- 1:nrow(cleaned_data)  # Replace with the actual rank range
+if (all(sort(cleaned_data$rank) >= expected_ranks)) {
+  message("Test Passed: 'rank' column contains valid ranks.")
+} else {
+  stop("Test Failed: 'rank' column contains invalid ranks.")
+}
 
-# Test that 'division' contains unique values (no duplicates)
-test_that("'division' column contains unique values", {
-  expect_equal(length(unique(analysis_data$division)), 151)
-})
+if (all(sort(cleaned_data$popularity) >= expected_ranks)) {
+  message("Test Passed: 'popularity' column contains valid ranks.")
+} else {
+  stop("Test Failed: 'popularity' column contains invalid ranks.")
+}
 
-# Test that 'state' contains only valid Australian state or territory names
-valid_states <- c("New South Wales", "Victoria", "Queensland", "South Australia", "Western Australia", 
-                  "Tasmania", "Northern Territory", "Australian Capital Territory")
-test_that("'state' contains valid Australian state names", {
-  expect_true(all(analysis_data$state %in% valid_states))
-})
+if (all(sort(cleaned_data$rank_favorites) == expected_ranks)) {
+  message("Test Passed: 'rank_favorites' column contains valid ranks.")
+} else {
+  stop("Test Failed: 'rank_favorites' column contains invalid ranks.")
+}
 
-# Test that there are no empty strings in 'division', 'party', or 'state' columns
-test_that("no empty strings in 'division', 'party', or 'state' columns", {
-  expect_false(any(analysis_data$division == "" | analysis_data$party == "" | analysis_data$state == ""))
-})
+# Check if there are no missing values in the dataset
+if (all(!is.na(cleaned_data))) {
+  message("Test Passed: The dataset contains no missing values.")
+} else {
+  stop("Test Failed: The dataset contains missing values.")
+}
 
-# Test that the 'party' column contains at least 2 unique values
-test_that("'party' column contains at least 2 unique values", {
-  expect_true(length(unique(analysis_data$party)) >= 2)
-})
+# Check if numeric columns are non-negative (e.g., "num_list_users", "num_favorites")
+if (all(cleaned_data$num_list_users >= 0)) {
+  message("Test Passed: 'num_list_users' values are non-negative.")
+} else {
+  stop("Test Failed: 'num_list_users' contains negative values.")
+}
+
+if (all(cleaned_data$num_favorites >= 0)) {
+  message("Test Passed: 'num_favorites' values are non-negative.")
+} else {
+  stop("Test Failed: 'num_favorites' contains negative values.")
+}
+
+# Check if 'title' column is character type
+if (is.character(cleaned_data$title)) {
+  message("Test Passed: 'title' is of type character.")
+} else {
+  stop("Test Failed: 'title' is not of type character.")
+}
