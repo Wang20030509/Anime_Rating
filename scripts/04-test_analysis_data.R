@@ -1,11 +1,13 @@
 #### Preamble ####
-# Purpose: Tests... [...UPDATE THIS...]
-# Author: Rohan Alexander [...UPDATE THIS...]
-# Date: 26 September 2024 [...UPDATE THIS...]
-# Contact: rohan.alexander@utoronto.ca [...UPDATE THIS...]
+# Purpose: Tests the structure and validity of the cleaned Anime Rating dataset.
+# Author: Doran Wang
+# Date: 26 November 2024
+# Contact: doran.wang@mail.utoronto.ca
 # License: MIT
-# Pre-requisites: [...UPDATE THIS...]
-# Any other information needed? [...UPDATE THIS...]
+# Pre-requisites:
+  # - The `tidyverse` and `arrow` packages must be installed and loaded
+  # - 03-simulate_data.R must have been run
+# Any other information needed? Make sure you are in the `anime_rating` rproj
 
 
 #### Workspace setup ####
