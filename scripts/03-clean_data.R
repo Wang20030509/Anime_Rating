@@ -17,6 +17,9 @@ library(arrow)
 #### Clean data ####
 raw_data <- read_parquet("../Anime_Rating/data/01-raw_data/anime_data.parquet")
 
+raw_data <- raw_data %>%
+  slice_head(n = 50)
+
 num_favorites <- c(230821,229949,215928, 192667, 176851, 176089, 114513, 110665,
                    109387, 92800, 92031, 91959, 90265, 86868, 84622, 81500, 79930,
                    77161, 76525, 75221, 70931, 69642, 69027, 65103, 63768, 59973,

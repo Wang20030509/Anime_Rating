@@ -32,7 +32,7 @@ library(arrow)
 # CLIENT_ID <- "YOUR_CLIENT_ID"
 
 # API URL
-url <- "https://api.myanimelist.net/v2/anime/ranking?ranking_type=favorite&limit=50&fields=title,mean,popularity,num_list_users,rank,num_scoring_users"
+url <- "https://api.myanimelist.net/v2/anime/ranking?ranking_type=favorite&limit=200&fields=title,mean,popularity,num_list_users,rank,num_scoring_users"
 
 # Make the GET request
 response <- GET(

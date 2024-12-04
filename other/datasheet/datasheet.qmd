@@ -4,8 +4,8 @@ subtitle: "Dataset for anime analytics"
 author: 
   - Doran Wang
 thanks: "Code and data are available at: [https://github.com/Wang20030509/Anime_Rating](https://github.com/Wang20030509/Anime_Rating)."
-date: "`r Sys.time()`"
-date-format: "D MMMM YYYY"
+date: today
+date-format: long
 abstract: "This dataset is a collection of data from MyAnimeList[@myanimelist], including manually compiled 'num_favorites' data, intended for analysis of anime popularity and user preferences."
 format: pdf
 number-sections: true
