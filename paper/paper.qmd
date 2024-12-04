@@ -21,9 +21,14 @@ bibliography: references.bib
 library(tidyverse)
 library(arrow)
 library(knitr)
+library(rstanarm)
+library(modelsummary)
+
 
 raw_data <- read_parquet("../data/01-raw_data/anime_data.parquet")
 anime_data <- read_parquet("../data/02-analysis_data/cleaned_data.parquet")
+cleaned_data <- read_parquet("../data/02-analysis_data/cleaned_data.parquet")
+anime_model <- readRDS(file = here::here("models/anime_model.rds"))
 ```
 
 
@@ -45,7 +50,7 @@ The remainder of this paper is structured as follows: @sec-data provides an over
 
 ## Overview
 
-For this analysis, the dataset was compiled using data extracted from the MyAnimeList API, which provides key variables such as anime titles, scores, popularity, and the number of list users. The "number of favorites" data, however, was not available through the API, so it was manually compiled by directly listing the values from the MyAnimeList website and included in the dataset for analysis. These data points were then cleaned and processed for analysis using the statistical programming software R [@citeR]. The analysis utilized several R packages from the tidyverse [@citeTidyverse], including dplyr [@citeDplyr] for data wrangling, ggplot2 [@citeGgplot] for visualization and ``knitr` [@citeKnitr]`. Data processing tasks, such as handling missing values and transforming variables, were carried out to ensure the dataset was ready for analysis.
+For this analysis, the dataset was compiled using data extracted from the MyAnimeList API, which provides key variables such as anime titles, scores, popularity, and the number of list users. The "number of favorites" data, however, was not available through the API, so it was manually compiled by directly listing the values from the MyAnimeList website and included in the dataset for analysis. These data points were then cleaned and processed for analysis using the statistical programming software R [@citeR]. The analysis utilized several R packages from the tidyverse [@citeTidyverse], ggplot2 [@citeGgplot] for visualization, `rstanarm` [@rstanarm], `arrow` [@citearrow] and `knitr` [@citeKnitr]`. Data processing tasks, such as handling missing values and transforming variables, were carried out to ensure the dataset was ready for analysis.
 
 The dataset contains observations for hundreds of anime titles, each accompanied by their respective attributes. The data was collected from a variety of genres, years, and user ratings, ensuring a comprehensive snapshot of anime as rated by MyAnimeList users. Following the methodology described in @tellingstories, we consider the correlation between popularity, favorites, and scores to explore the factors that influence anime ratings.
 
@@ -111,34 +116,71 @@ The outcome variable in this analysis is the anime score, which is a critical me
 ### Popularity
 
 ```{r}
-#| label: fig-popularity
-#| fig-cap: "Relationship between popularity and anime scores"
+#| label: fig-favorites-histogram
+#| fig-cap: "Histogram of Popularity for Top 10 Highest-Rated Anime"
 #| echo: false
 #| warning: false
 #| message: false
 
-ggplot(anime_data, aes(x = `Number of List Users`, y = Score)) +
-  geom_point() +
-  geom_smooth(method = "lm", se = FALSE, color = "blue") +
-  labs(title = "Anime Popularity vs. Score", x = "Number of List Users ", y = "Score")
+# Select top 10 highest rated anime based on the Score
+top_10_anime <- cleaned_data %>%
+  arrange(desc(score)) %>%
+  head(10)
 
+# Create a histogram of Number of Favorites with different colors for each anime title
+ggplot(top_10_anime, aes(x = score, y = num_list_users, fill = title)) +
+  geom_bar(stat = "identity") +
+  labs(
+    x = "Score",
+    y = "Number of Users who Have Anime in List"
+  ) +
+  scale_fill_manual(values = RColorBrewer::brewer.pal(10, "Set3")) +  # Color palette for different titles
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+    axis.title = element_text(size = 12, face = "bold"),
+    axis.text.x = element_text(size = 10),
+    axis.text.y = element_text(size = 10),
+    legend.title = element_text(size = 12),
+    legend.text = element_text(size = 10)
+  ) +
+  guides(fill = guide_legend(title = "Anime Title"))  # Add legend for titles
 ```
 The popularity variable is a key predictor that measures how widely known an anime is, as indicated by the number of users who have rated it. The higher the popularity score, the more likely it is that the anime has a larger audience, which we expect will correlate with a higher score. Similarly, number of favorites reflects the level of long-term engagement with an anime. Users who favorite an anime are signaling a deeper personal attachment or preference for it, and this engagement is expected to positively influence its score.
 
 
 ### Favorites
 ```{r}
-#| label: fig-favorites
-#| fig-cap: "Effect of number of favorites on anime scores"
+#| label: fig-favorites-histogram
+#| fig-cap: "Histogram of Number of Favorites for Top 10 Highest-Rated Anime"
 #| echo: false
 #| warning: false
 #| message: false
 
-ggplot(anime_data, aes(x = `Number of Favorites`, y = Score)) +
-  geom_point() +
-  geom_smooth(method = "lm", se = FALSE, color = "red") +
-  labs(title = "Number of Favorites vs. Anime Score", x = "Number of Favorites", y = "Score")
+# Select top 10 highest rated anime based on the Score
+top_10_anime <- cleaned_data %>%
+  arrange(desc(score)) %>%
+  head(10)
 
+# Create a histogram of Number of Favorites with different colors for each anime title
+ggplot(top_10_anime, aes(x = score, y = num_favorites, fill = title)) +
+  geom_bar(stat = "identity") +
+  labs(
+    title = "Histogram of Number of Favorites for Top 10 Highest-Rated Anime",
+    x = "Score",
+    y = "Number of Favorites"
+  ) +
+  scale_fill_manual(values = RColorBrewer::brewer.pal(10, "Set3")) +  # Color palette for different titles
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+    axis.title = element_text(size = 12, face = "bold"),
+    axis.text.x = element_text(size = 10),
+    axis.text.y = element_text(size = 10),
+    legend.title = element_text(size = 12),
+    legend.text = element_text(size = 10)
+  ) +
+  guides(fill = guide_legend(title = "Anime Title"))  # Add legend for titles
 ```
 We also consider the ranking of anime, which is another important aspect influencing its visibility and perceived quality. Higher-ranked anime typically have higher scores, as they are often more popular or well-received by the community.
 
@@ -166,13 +208,13 @@ y_i|\mu_i, \sigma &\sim \mbox{Normal}(\mu_i, \sigma) \\
 \end{align}
 
 Where:
-$y_i$ is the anime score for anime $i$,
-$\mu_i$ is the expected score for anime $i$ based on the predictors,
-popularity is the number of users who have the anime in their list,
-favorites is the manually compiled number of favorites for the anime,
-$\alpha$ is the intercept term,
-$\beta_1$ and $\beta_2$ are the regression coefficients for popularity and number of favorites,
-$\sigma$ is the standard deviation of the residuals (i.e., the model error).
+ - $y_i$ is the anime score for anime $i$,
+ - $\mu_i$ is the expected score for anime $i$ based on the predictors,
+ - popularity is the number of users who have the anime in their list,
+ - favorites is the manually compiled number of favorites for the anime,
+ - $\alpha$ is the intercept term,
+ - $\beta_1$ and $\beta_2$ are the regression coefficients for popularity and number of favorites,
+ - $\sigma$ is the standard deviation of the residuals (i.e., the model error).
 We run the model in R [@citeR] using the rstanarm package from @rstanarm. The priors are chosen to be non-informative, with default values based on the assumption that we have little prior knowledge about the relationships between the variables
 
 
@@ -185,47 +227,93 @@ By using this model, we aim to quantify the strength of these relationships and 
 
 # Results {#sec-result}
 
-Our results are summarized in @tbl-modelresults.
+Our results are summarized in @tbl-modelresults. The Bayesian model used in this analysis provides insights into how popularity and number of favorites influence anime scores. The model confirms some expected patterns and reveals counter-intuitive findings.
+
+## Popularity vs. Anime Score
+The relationship between popularity and anime score was initially expected to show a clear positive correlation. However, our model suggests that the popularity of an anime (measured by the number of users who have rated it) does not consistently lead to higher anime scores. In fact, some anime with very high scores are ranked low in popularity, while others with high popularity have lower scores. This result is counter-intuitive, as we might expect that more popular anime would receive higher ratings.
+```{r}
+#| label: fig-popularity-vs-score
+#| fig-cap: "Relationship between popularity and anime scores"
+#| echo: false
+#| warning: false
+#| message: false
+
+ggplot(cleaned_data, aes(x = popularity, y = score)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, color = "blue") +
+  labs(title = "Popularity vs Anime Score", x = "Popularity", y = "Anime Score")
+
+```
+
+The plot @fig-popularity-vs-score illustrates this weak relationship. Despite high popularity indicating more user involvement, it does not guarantee higher anime scores. This suggests that while popularity can reflect a broad audience, it does not necessarily indicate high quality or fan approval.
+
+
+## Number of Favorites vs. Anime Score
+
+On the other hand, number of favorites consistently shows a positive relationship with anime scores. Anime that are favored by more users tend to receive higher ratings, confirming our hypothesis that favorites is a more reliable indicator of an anime’s quality and fan engagement than popularity.
+
+```{r}
+#| label: fig-favorites-vs-score
+#| fig-cap: "Relationship between number of favorites and anime scores"
+#| echo: false
+#| warning: false
+#| message: false
+
+ggplot(cleaned_data, aes(x = num_favorites, y = score)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  labs(title = "Number of Favorites vs Anime Score", x = "Number of Favorites", y = "Anime Score")
+
+```
+In @fig-favorites-vs-score, we observe a clear positive trend: as the number of favorites increases, so does the anime score. This relationship suggests that user engagement, specifically through favorites, is a strong predictor of how highly an anime is rated by the community.
+
+## Summary of Results
+To summarize, our analysis reveals two key findings:
+
+Popularity and anime score show a weak relationship. While we might expect more popular anime to score higher, this is not consistently true. Some anime with high scores have relatively low popularity rankings, and vice versa.
+Number of favorites is a much stronger predictor of anime scores, showing a clear and consistent positive relationship. This suggests that deeper engagement (i.e., when users favorite anime) is a better indicator of the anime’s perceived quality.
 
 ```{r}
 #| echo: false
 #| eval: true
 #| warning: false
 #| message: false
-
-library(rstanarm)
-
-
-```
-
-```{r}
-#| echo: false
-#| eval: true
 #| label: tbl-modelresults
-#| tbl-cap: "Explanatory models of flight time based on wing width and wing length"
-#| warning: false
 
-
+modelsummary(
+  list(
+    "Anime Score" = anime_model
+  ),
+  statistic = "mad"
+  )
 ```
 
-
+The table @tbl-modelresults presents the summary of the correlation coefficients and p-values for the relationships between popularity, number of favorites, and anime score. As shown in the table, the number of favorites variable demonstrates a significantly stronger positive correlation with anime score compared to popularity. The correlation for number of favorites is notably higher, indicating that favorites are a more reliable predictor of anime scores than popularity. Furthermore, the p-value for number of favorites suggests statistical significance, reinforcing its stronger impact on anime score. In contrast, popularity has a lower correlation and a higher p-value, suggesting a weaker and less significant relationship with anime score.
 
 
 # Discussion {#sec-discussion}
 
-## First discussion point {#sec-first-point}
+## Relationship Between Popularity and Score
+The comparison of popularity and score reveals a counterintuitive situation in the dataset. As we analyzed, popularity (as measured by the number of users who add an anime to their list) generally reflects the visibility and widespread appeal of an anime. However, it does not necessarily correlate with a higher score. In fact, some highly popular anime with a large number of list users have relatively low scores, while other anime with higher scores have comparatively low popularity rankings. This suggests that, while an anime’s popularity is an important factor in its reach and visibility, it does not guarantee high ratings or audience satisfaction. This finding challenges the conventional assumption that popularity drives better quality ratings, and it may imply that other factors, such as niche appeal, loyal fanbases, or even specific genre preferences, play a significant role in determining anime scores.
 
-If my paper were 10 pages, then should be be at least 2.5 pages. The discussion is a chance to show off what you know and what you learnt from all this. 
+In future analyses, we could explore further variables that influence the relationship between popularity and ratings. For example, factors such as the timing of the anime’s release, genre, and the target audience could be incorporated to understand whether certain types of anime naturally achieve higher popularity without necessarily receiving better ratings. This would help refine our understanding of what drives anime scores beyond just the number of users who add them to their lists.
 
-## Second discussion point
+## Limitations
 
-Please don't use these as sub-heading labels - change them to be what your point actually is.
+This study uses data collected from MyAnimeList (MAL), which is one of the most widely used anime databases. However, MAL is a single website, and the dataset is inherently limited in scope. The sample only reflects the opinions and ratings of a specific subset of anime viewers who are active on MAL, which may not be representative of the broader global anime-watching population. MAL users tend to be more engaged and passionate about anime, which could lead to a bias in the dataset. For example, casual viewers or those who watch anime on streaming platforms like Crunchyroll or Netflix might not be represented in this dataset. Therefore, the findings and conclusions drawn from this data may not fully capture the preferences of all anime fans worldwide.
 
-## Third discussion point
+Another limitation is that the dataset only captures rating scores and popularity rankings without accounting for other potentially influential factors, such as social media buzz, influencer endorsements, or broader cultural impacts that might drive anime popularity or quality perception. A more comprehensive dataset that includes multiple sources of ratings and reviews (e.g., streaming platforms, social media discussions, etc.) could provide a more balanced and nuanced understanding of anime rankings and their determinants.
 
-## Weaknesses and next steps
+## Conclusions
+From this analysis, we conclude that higher popularity does not necessarily mean higher scores. The number of list users on MAL—a proxy for popularity—does not have a strong or consistent positive correlation with the anime score. In contrast, the number of people who rate an anime seems to have a significant impact on its score, as those with higher ratings are often more highly scored. This suggests that the quality of the anime, as reflected by individual ratings, plays a much larger role in determining the overall score than the sheer volume of users adding it to their lists.
 
-Weaknesses and next steps should also be included.
+## Weaknesses and Next Steps
+The limitations of the data discussed above indicate that this analysis might not be fully generalizable to the entire anime-viewing population. Future research could expand the dataset to include other sources of ratings, such as those from streaming platforms or surveys of casual anime viewers. Additionally, considering anime genre, release timing, and platform-specific differences could provide a richer understanding of the factors influencing popularity and score. Incorporating these variables would help create a more comprehensive model that could explain the complexities of anime ratings beyond the simplistic measure of popularity.
+
+Future work should also focus on understanding the cultural context and how it impacts anime scores. For example, an anime that performs well in Japan might not necessarily have the same reception in other parts of the world. Exploring international audiences’ tastes and preferences could reveal interesting regional differences that are not captured by a single-site dataset like MAL.
+
+Lastly, a more detailed analysis of review sentiment (positive vs. negative reviews) and critical reception from multiple sources (including critics, streaming platforms, and viewers) could be beneficial. This would provide a more well-rounded understanding of what drives anime scores, giving us insight into the factors that most contribute to an anime’s success or failure.
+
 
 \newpage
 
@@ -245,7 +333,6 @@ Weaknesses and next steps should also be included.
 
 raw_data[1:5, 1:3]|>
   kable()
-
 raw_data[1:5, 4:ncol(raw_data)]|>
   kable()
 ```
@@ -255,10 +342,10 @@ All scores given in the database are calculated as a weighted score.
 
 Weighted Score = $(v / (v + m)) * S + (m / (v + m)) * C$
 
-$S$ = Average score for the anime/manga
-$v$ = Number users giving a score for the anime/manga †
-$m$ = Minimum number of scored users required to get a calculated score
-$C$ = The mean score across the entire Anime/Manga database
+ - $S$ = Average score for the anime/manga.
+ - $v$ = Number users giving a score for the anime/manga.
+ - $m$ = Minimum number of scored users required to get a calculated score.
+ - $C$ = The mean score across the entire Anime/Manga database.
 
 † Note that v does not correspond to the "number of scored users" as seen on the database page. Scores from users who have not viewed 1/5 of the series upon its completion are not included. Scores given from illegitimate accounts created to sway votes are also not included in the scoring algorithm.
 
@@ -267,47 +354,185 @@ Not Yet Aired entries have no score and will display N/A. Entries that do not me
 Top Anime/Manga Rankings
 The "Top Upcoming" and "Most Popular" rankings are ordered by the number of users who have added the entry to their list. All other Top Anime and Top Manga rankings are ordered by weighted score, as calculated above. Please note that while R18+ entries calculate a weighted score, they are excluded from the rankings. Music Videos are also excluded from Top Anime.
 
+
+
 # Model details {#sec-model-details}
 
 ## Posterior predictive check
 
-In @fig-ppcheckandposteriorvsprior-1 we implement a posterior predictive check. This shows...
-
-In @fig-ppcheckandposteriorvsprior-2 we compare the posterior with the prior. This shows... 
+In @fig-ppcheckandposteriorvsprior-1 we implement a posterior predictive check. This compares the posterior predictions of anime score based on the popularity and number of favorites to the observed data. It is evident that the posterior distribution aligns well with the actual anime scores, suggesting that the model has captured the underlying data patterns effectively. This is a good indication that the model provides a reliable representation of how these predictors influence anime ratings.
 
 ```{r}
-#| eval: true
+#| label: fig-ppcheckandposteriorvsprior
+#| fig-cap: "Posterior predictive check for anime rating model"
+#| fig-subcap: ["Posterior prediction check", "Comparing the posterior with the prior"]
 #| echo: false
 #| message: false
 #| warning: false
-#| label: fig-ppcheckandposteriorvsprior
 #| layout-ncol: 2
-#| fig-cap: "Examining how the model fits, and is affected by, the data"
-#| fig-subcap: ["Posterior prediction check", "Comparing the posterior with the prior"]
 
+pp_check(anime_model) +
+  theme_classic() +
+  theme(legend.position = "bottom")
+
+posterior_vs_prior(anime_model) +
+  theme_minimal() +
+  scale_color_brewer(palette = "Set1") +
+  theme(legend.position = "bottom") +
+  coord_flip()
 
 ```
 
 ## Diagnostics
+@fig-stanareyouokay-1 is a trace plot. It shows the trace of the sampling process for the model parameters. The horizontal lines and overlapping chains suggest that the model has converged, with no signs of issues in the sampling process. This suggests that the posterior distribution has been adequately explored.
 
-@fig-stanareyouokay-1 is a trace plot. It shows... This suggests...
-
-@fig-stanareyouokay-2 is a Rhat plot. It shows... This suggests...
+@fig-stanareyouokay-2 is an Rhat plot. It compares the variability within each chain to the variability between chains in the MCMC process. As seen in the plot, the Rhat values are all close to 1, which is an indicator that the MCMC algorithm has reached convergence.
 
 ```{r}
-#| echo: false
-#| eval: true
-#| message: false
-#| warning: false
 #| label: fig-stanareyouokay
 #| fig-cap: "Checking the convergence of the MCMC algorithm"
 #| fig-subcap: ["Trace plot", "Rhat plot"]
 #| layout-ncol: 2
+#| echo: false
+#| warning: false
+#| message: false
 
+plot(anime_model, "trace")
+
+plot(anime_model, "rhat")
 
 ```
 
+## 90% Credibility Interval {#sec-credibility-interval}
 
+@fig-modelresults1 and @fig-modelresults2 are 90% credibility interval plots for the predictors popularity and number of favorites. These plots show the credible intervals for each predictor, helping to understand the uncertainty around their effects on anime score.
+
+```{r}
+#| label: fig-modelresults1
+#| fig-cap: "Credible intervals for predictors of anime score"
+#| echo: false
+#| warning: false
+#| message: false
+#| eval: true
+
+modelplot(anime_model, conf_level = 0.90, size = 0.2) +
+  labs(x = "90% credibility interval") +
+  theme(axis.text.y = element_text(size = 6))
+
+```
+
+```{r}
+#| label: fig-modelresults2
+#| fig-cap: "Credible intervals for predictors with x-axis limits"
+#| echo: false
+#| warning: false
+#| message: false
+#| eval: true
+
+model_plot <- modelplot(anime_model, conf_level = 0.90, size = 0.2)
+
+model_plot + xlim(-5, 5) +  # Adjust the limits as needed
+  labs(x = "90% Credibility Interval") +
+  theme(axis.text.y = element_text(size = 6))
+
+```
+
+## Summary
+The model diagnostics, including posterior predictive checks, trace plots, and Rhat values, suggest that the model has converged properly and is fitting the data well. The credible intervals for popularity and number of favorites show the uncertainty around the estimates for these predictors. These results provide a robust understanding of the relationship between these predictors and anime scores.
+
+
+
+# Idealized Methodology and Survey {#sec-methodology}
+
+In this section, we explore an idealized methodology for collecting data related to anime ratings and their relationship with popularity and number of favorites. The goal is to design a robust and comprehensive methodology that ensures reliable data collection, minimizes bias, and allows for meaningful analysis. The methodology would consider aspects of survey design, sampling, and the limitations of the dataset to address the research questions more effectively. This will provide a foundation for future research into understanding the factors that influence anime scores and their potential implications for content creators, platforms, and consumers.
+
+## Sampling Frame and Target Population
+For this study, the target population would be individuals who actively rate or review anime on MyAnimeList (MAL), as this is the source of the data in this paper. However, it is crucial to recognize that MAL users are not representative of the global anime-watching population. MAL users tend to be more engaged, active fans who have strong preferences and are more likely to rate and review anime frequently. Therefore, the sample would be limited to these active users, but future research could look to include a broader audience by incorporating data from other platforms (such as Crunchyroll, Funimation, or Netflix) or by conducting surveys targeting more casual anime viewers.
+
+In an ideal scenario, the sampling frame would include a stratified random sample of MAL users. This would help to balance the representation of different user demographics, such as age, gender, and geographic location, as well as the diversity of anime genres that users engage with. By ensuring that these factors are represented, the study can provide a more comprehensive understanding of the factors that contribute to anime ratings and their relationship with popularity and number of favorites.
+
+## Survey and Data Collection Methodology
+
+To supplement the data collected from MAL, we could design a survey to gather self-reported data from anime viewers. The survey would focus on understanding why users rate anime the way they do, exploring the relationship between anime popularity, personal preferences, and rating behavior. The survey would consist of a mix of quantitative and qualitative questions that explore both objective ratings (scores, popularity, etc.) and subjective impressions (favorite genres, character appeal, thematic depth, etc.).
+
+### Survey Design
+
+Quantitative Questions:
+
+1. How often do you rate anime on MyAnimeList?
+
+ - Never
+ - Occasionally
+ - Regularly
+ - Always
+ 
+2. What factors do you consider when rating an anime? (Select all that apply)
+
+ - Story/Plot
+ - Animation quality
+ - Characters
+ - Music/Soundtrack
+ - Themes/Philosophy
+ - Overall entertainment
+
+3. How likely are you to give a high rating (8 or above) to anime that you feel has gained high popularity?
+
+ - Very likely
+ - Likely
+ - Neutral
+ - Unlikely
+ - Very unlikely
+
+4. What is your favorite anime genre?
+
+ - Action
+ - Romance
+ - Fantasy
+ - Science Fiction
+ - Slice of Life
+ - Horror
+ - Other (please specify)
+
+5. Qualitative Questions:
+
+ - What do you think influences your decision to rate an anime higher than others? Please explain.
+
+ - Do you think anime with high popularity (many users adding it to their lists) deserve a higher score? Why or why not?
+
+ - What role does anime fan engagement (such as fan art, online discussions, etc.) play in your ratings?
+
+ - Have you ever rated an anime lower because it was overrated by others or popular on the site?
+
+This survey would be distributed through MyAnimeList or social media groups dedicated to anime discussion. To ensure a good response rate and data quality, we would promote the survey through anime-related channels and community groups, and incentivize participation through rewards such as anime merchandise or premium subscriptions to streaming services
+
+### Sampling Methodology
+We would adopt a stratified random sampling approach to ensure that the survey includes responses from users of different anime genres and varying levels of anime engagement. Users would be classified based on their interaction with the site (e.g., frequency of rating anime, diversity of genres rated) and their anime preferences (e.g., top-rated, niche anime, or specific genres). A stratified random sample would allow for better representation of anime enthusiasts who rate multiple genres versus those who are more focused on specific types of anime.
+
+To enhance the representativeness of the sample, the survey would be designed to collect data from users in different geographical regions, understanding the potential cultural differences that could influence the anime rating process. This would address one of the limitations of our MAL-only dataset, which is inherently biased toward certain cultural groups.
+
+## Data Collection and Survey Implementation
+
+The survey would be distributed primarily through MyAnimeList's messaging system or social media groups related to anime communities (e.g., Facebook, Reddit, Discord). The process would involve:
+
+1. Recruitment: Using platforms like MyAnimeList, Reddit, or Facebook to recruit participants and provide links to the survey.
+2. Informed Consent: Clear information about the purpose of the survey, ensuring participants understand how their data will be used and that it will remain anonymous.
+3. Incentives: Offering incentives such as anime-themed gift cards or subscriptions to encourage participation.
+4. Data Privacy: Ensuring privacy and confidentiality, as the survey would involve self-reported data related to individual preferences and habits.
+
+## Survey Data Analysis and Reporting
+After collecting the survey data, we would conduct both descriptive and inferential analyses. Descriptive statistics would summarize the frequency and distribution of responses, while inferential techniques (such as regression analysis) would help to identify relationships between anime ratings, popularity, and user preferences. This would complement the observational data we already have from MyAnimeList and offer deeper insights into how external factors (e.g., genre preference, fan engagement) influence anime scores.
+
+## Limitations of the Idealized Survey
+While this idealized survey methodology offers a comprehensive approach to studying anime ratings and their correlation with popularity, there are still some potential limitations:
+
+1. Self-Reported Bias: Respondents may provide socially desirable answers or overemphasize certain factors like popularity, leading to biases in the data.
+2. Sampling Bias: While we aim for a stratified random sample, anime communities on MyAnimeList and similar platforms may not fully represent the global diversity of anime viewers.
+3. Survey Fatigue: As surveys require participant time and effort, there’s a risk of low completion rates or non-responses from certain groups, particularly those less active on anime-related websites.
+
+## Future Directions
+In future research, it would be valuable to explore multiple sources of data from other anime platforms and crowdsourcing initiatives to broaden the scope and ensure a more representative view of global anime ratings. Additionally, analyzing data from real-time fan engagement (e.g., social media trends, fan art) would provide a more dynamic and holistic view of anime popularity and ratings. Lastly, combining observational data with survey data could offer deeper insights into the cultural and subjective factors that influence anime ratings beyond what is captured on MyAnimeList.
+
+By refining and expanding this idealized methodology, we can create more accurate models of anime ratings and uncover the hidden dynamics that shape viewers' preferences across different platforms and cultural contexts.
 
 \newpage
 

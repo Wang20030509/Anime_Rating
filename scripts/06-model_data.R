@@ -1,25 +1,29 @@
 #### Preamble ####
-# Purpose: Models... [...UPDATE THIS...]
-# Author: Rohan Alexander [...UPDATE THIS...]
-# Date: 11 February 2023 [...UPDATE THIS...]
-# Contact: rohan.alexander@utoronto.ca [...UPDATE THIS...]
+# Purpose: Model the relationship between anime scores, popularity, and number of favorites
+# Author: Doran Wang
+# Date: 30 November 2024
+# Contact: doran.wang@mail.utoronto.ca
 # License: MIT
-# Pre-requisites: [...UPDATE THIS...]
-# Any other information needed? [...UPDATE THIS...]
-
+# Pre-requisites: 
+  # - Access the 03-clean_data.R first
+  # - The `tidyverse` package must be installed and loaded
+  # - The `arrow` package must be installed and loaded
+  # - The `rstanarm` package must be installed and loaded
+# Any other information needed? [Update if necessary]
 
 #### Workspace setup ####
 library(tidyverse)
 library(rstanarm)
+library(arrow)
 
 #### Read data ####
-analysis_data <- read_csv("data/analysis_data/analysis_data.csv")
+cleaned_data <- read_parquet("data/02-analysis_data/cleaned_data.parquet")
 
 ### Model data ####
-first_model <-
+anime_model <-
   stan_glm(
-    formula = flying_time ~ length + width,
-    data = analysis_data,
+    formula = score ~ popularity + num_favorites,
+    data = cleaned_data,
     family = gaussian(),
     prior = normal(location = 0, scale = 2.5, autoscale = TRUE),
     prior_intercept = normal(location = 0, scale = 2.5, autoscale = TRUE),
@@ -27,11 +31,8 @@ first_model <-
     seed = 853
   )
 
-
 #### Save model ####
 saveRDS(
-  first_model,
-  file = "models/first_model.rds"
+  anime_model,
+  file = "models/anime_model.rds"
 )
-
-
