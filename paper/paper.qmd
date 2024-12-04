@@ -50,7 +50,7 @@ The remainder of this paper is structured as follows: @sec-data provides an over
 
 ## Overview
 
-For this analysis, the dataset was compiled using data extracted from the MyAnimeList API, which provides key variables such as anime titles, scores, popularity, and the number of list users. The "number of favorites" data, however, was not available through the API, so it was manually compiled by directly listing the values from the MyAnimeList website and included in the dataset for analysis. These data points were then cleaned and processed for analysis using the statistical programming software R [@citeR]. The analysis utilized several R packages from the tidyverse [@citeTidyverse], ggplot2 [@citeGgplot] for visualization, `rstanarm` [@rstanarm], `arrow` [@citearrow] and `knitr` [@citeKnitr]`. Data processing tasks, such as handling missing values and transforming variables, were carried out to ensure the dataset was ready for analysis.
+For this analysis, the dataset was compiled using data extracted from the MyAnimeList API, which provides key variables such as anime titles, scores, popularity, and the number of list users. The "number of favorites" data, however, was not available through the API, so it was manually compiled by directly listing the values from the MyAnimeList website and included in the dataset for analysis. These data points were then cleaned and processed for analysis using the statistical programming software R [@citeR]. The analysis utilized several R packages from the tidyverse [@citeTidyverse], ggplot2 [@citeGgplot2] for visualization, `rstanarm` [@rstanarm], `arrow` [@citearrow] and `knitr` [@citeKnitr]`. Data processing tasks, such as handling missing values and transforming variables, were carried out to ensure the dataset was ready for analysis.
 
 The dataset contains observations for hundreds of anime titles, each accompanied by their respective attributes. The data was collected from a variety of genres, years, and user ratings, ensuring a comprehensive snapshot of anime as rated by MyAnimeList users. Following the methodology described in @tellingstories, we consider the correlation between popularity, favorites, and scores to explore the factors that influence anime ratings.
 
@@ -116,7 +116,7 @@ The outcome variable in this analysis is the anime score, which is a critical me
 ### Popularity
 
 ```{r}
-#| label: fig-favorites-histogram
+#| label: fig-popularity-histogram
 #| fig-cap: "Histogram of Popularity for Top 10 Highest-Rated Anime"
 #| echo: false
 #| warning: false
